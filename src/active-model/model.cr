@@ -1,5 +1,6 @@
 require "json"
 require "yaml"
+require "db"
 
 require "http/params"
 require "http-params-serializable/ext"
@@ -8,6 +9,7 @@ require "./http-params"
 abstract class ActiveModel::Model
   include JSON::Serializable
   include YAML::Serializable
+  include DB::Serializable
 
   # :nodoc:
   FIELD_MAPPINGS = {} of Nil => Nil
@@ -290,7 +292,6 @@ abstract class ActiveModel::Model
       def {{name}}=(value : {{opts[:klass]}})
         if !@{{name}}_changed && @{{name}} != value
           @{{name}}_changed = true
-
           @{{name}}_was = @{{name}}
         end
         {% if SETTERS[name] %}
@@ -543,10 +544,19 @@ abstract class ActiveModel::Model
         emit_null: {{tags[:yaml_emit_null]}}
       {% end %}
     )]
+    @[DB::Field(
+      {% if !persistence %}
+        ignore: true,
+      {% end %}
+      {% if !converter.nil? %}
+        converter: {{converter}}
+      {% end %}
+    )]
     @{{name.var}} : {{type_signature.id}}
 
     @[JSON::Field(ignore: true)]
     @[YAML::Field(ignore: true)]
+    @[DB::Field(ignore: true)]
     getter? {{name.var}}_present : Bool = false
 
     # Attribute default value
